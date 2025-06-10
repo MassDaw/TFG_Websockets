@@ -1,20 +1,10 @@
-from gevent import monkey
-monkey.patch_all()
-
-import os
-from flask import Flask
-from flask_sock import Sock
-import requests
+import asyncio
 import json
-import time
+import os
+import requests
 from datetime import datetime
-from gevent.pywsgi import WSGIServer
-from geventwebsocket.handler import WebSocketHandler
+import websockets
 
-app = Flask(__name__)
-sock = Sock(app)
-
-# Configuración para API pública
 COINGECKO_API = "https://api.coingecko.com/api/v3"
 UPDATE_INTERVAL = 30  # segundos
 
@@ -51,7 +41,6 @@ def get_crypto_data():
         coins_response.raise_for_status()
         coins = coins_response.json()
 
-        # Validación de datos globales
         market_cap = global_data.get("data", {}).get("total_market_cap", {}).get("eur", 0)
         volume_24h = global_data.get("data", {}).get("total_volume", {}).get("eur", 0)
 
@@ -79,20 +68,16 @@ def get_crypto_data():
         print(f"Error obteniendo datos: {e}")
         return None
 
-@sock.route('/ws')
-def handle_websocket(ws):
+async def handler(websocket, path):
     while True:
         data = get_crypto_data()
         if data:
-            ws.send(json.dumps(data))
-        time.sleep(UPDATE_INTERVAL)
+            await websocket.send(json.dumps(data))
+        await asyncio.sleep(UPDATE_INTERVAL)
 
-@app.route("/")
-def index():
-    return "Servidor Flask activo"
-
-if __name__ == '__main__':
-    print("Iniciando servidor Flask...")
+if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8001))
-    server = WSGIServer(('0.0.0.0', port), app, handler_class=WebSocketHandler)
-    server.serve_forever()
+    print(f"Servidor WebSocket escuchando en el puerto {port}")
+    start_server = websockets.serve(handler, "0.0.0.0", port)
+    asyncio.get_event_loop().run_until_complete(start_server)
+    asyncio.get_event_loop().run_forever()
