@@ -17,6 +17,25 @@ sock = Sock(app)
 COINGECKO_API = "https://api.coingecko.com/api/v3"
 UPDATE_INTERVAL = 30  # segundos
 
+@app.route('/')
+def index():
+    return {
+        'status': 'WebSocket Crypto Server Running',
+        'endpoints': {
+            'websocket': '/ws',
+            'health': '/health'
+        },
+        'timestamp': datetime.now().isoformat()
+    }
+
+@app.route('/health')
+def health():
+    return {
+        'status': 'ok', 
+        'timestamp': datetime.now().isoformat(),
+        'websocket_endpoint': '/ws'
+    }
+
 def format_number(number):
     if number is None:
         return "€0.00"
