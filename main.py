@@ -1,17 +1,10 @@
-from gevent import monkey
-monkey.patch_all()
-
-import os
-from flask import Flask, jsonify
+from flask import Flask
 from flask_sock import Sock
 import requests
 import json
 import time
 from datetime import datetime
-from gevent.pywsgi import WSGIServer
-from geventwebsocket.handler import WebSocketHandler
-import asyncio
-import websockets
+from http.server import BaseHTTPRequestHandler
 
 app = Flask(__name__)
 sock = Sock(app)
@@ -82,34 +75,74 @@ def get_crypto_data():
 
 @sock.route('/ws')
 def handle_websocket(ws):
-    print("WebSocket connection established")  # Add this line
     while True:
         data = get_crypto_data()
         if data:
-            print("Sending data:", data)  # Add this line
             ws.send(json.dumps(data))
         time.sleep(UPDATE_INTERVAL)
 
-@app.route("/healthz")
-def healthz():
-    return jsonify({"status": "ok"}), 200
+class handler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        try:
+            data = get_crypto_data()
+            
+            self.send_response(200)
+            self.send_header('Content-type', 'application/json')
+            self.send_header('Access-Control-Allow-Origin', '*')
+            self.end_headers()
+            
+            self.wfile.write(json.dumps(data).encode())
+        except Exception as e:
+            self.send_response(500)
+            self.end_headers()
+            self.wfile.write(json.dumps({"error": str(e)}).encode())
+    
+    def get_crypto_data(self):
+        try:
+            global_response = requests.get(f"{COINGECKO_API}/global")
+            global_response.raise_for_status()
+            global_data = global_response.json()
 
-async def test_client():
-    uri = "ws://localhost:8001/ws"  # Replace with your local address
-    async with websockets.connect(uri) as websocket:
-        while True:
-            try:
-                message = await websocket.recv()
-                print(f"Received: {message}")
-            except websockets.exceptions.ConnectionClosedOK:
-                break
-            except Exception as e:
-                print(f"Error: {e}")
-                break
+            coins_response = requests.get(
+                f"{COINGECKO_API}/coins/markets",
+                params={
+                    "vs_currency": "eur",
+                    "order": "market_cap_desc",
+                    "per_page": 50,
+                    "sparkline": False
+                }
+            )
+            coins_response.raise_for_status()
+            coins = coins_response.json()
+
+            # Validación de datos globales
+            market_cap = global_data.get("data", {}).get("total_market_cap", {}).get("eur", 0)
+            volume_24h = global_data.get("data", {}).get("total_volume", {}).get("eur", 0)
+
+            market_data = {
+                "marketCap": format_number(market_cap),
+                "volume24h": format_number(volume_24h),
+                "lastUpdated": datetime.now().strftime("%H:%M:%S")
+            }
+
+            assets = [{
+                "id": coin.get("id", ""),
+                "name": coin.get("name", ""),
+                "symbol": coin.get("symbol", "").upper(),
+                "price": format_number(coin.get("current_price")),
+                "volume": format_number(coin.get("total_volume")),
+                "isFavorite": False
+            } for coin in coins if coin]
+
+            return {
+                "type": "crypto",
+                "market": market_data,
+                "assets": assets
+            }
+        except Exception as e:
+            print(f"Error obteniendo datos: {e}")
+            return None
 
 if __name__ == '__main__':
-    port = int(os.environ.get("PORT", 8001))
-    # Usa WSGIServer para servir la app con soporte WebSocket y HTTP
-    server = WSGIServer(('0.0.0.0', port), app, handler_class=WebSocketHandler)
-    server.serve_forever()
-#    asyncio.run(test_client())  # No ejecutes el cliente aquí
+    app.run(port=8001, debug=True)
+    # uvicorn main:app --host 0.0.0.0 --port 8008
