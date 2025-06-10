@@ -17,8 +17,12 @@ sock = Sock(app)
 COINGECKO_API = "https://api.coingecko.com/api/v3"
 UPDATE_INTERVAL = 30  # segundos
 
+print("Starting WebSocket Crypto Server...")
+print(f"Port: {os.environ.get('PORT', 8001)}")
+
 @app.route('/')
 def index():
+    print("Index route accessed")
     return {
         'status': 'WebSocket Crypto Server Running',
         'endpoints': {
@@ -30,6 +34,7 @@ def index():
 
 @app.route('/health')
 def health():
+    print("Health route accessed")
     return {
         'status': 'ok', 
         'timestamp': datetime.now().isoformat(),
@@ -108,5 +113,10 @@ def handle_websocket(ws):
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8001))
-    server = WSGIServer(('0.0.0.0', port), app)
-    server.serve_forever()
+    print(f"Starting server on 0.0.0.0:{port}")
+    try:
+        server = WSGIServer(('0.0.0.0', port), app)
+        print("Server created successfully")
+        server.serve_forever()
+    except Exception as e:
+        print(f"Server error: {e}")
