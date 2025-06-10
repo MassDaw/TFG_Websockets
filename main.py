@@ -11,7 +11,7 @@ sock = Sock(app)
 
 # Configuración para API pública
 COINGECKO_API = "https://api.coingecko.com/api/v3"
-UPDATE_INTERVAL = 30  # segundos
+UPDATE_INTERVAL = 90  # segundos
 
 def format_number(number):
     if number is None:
