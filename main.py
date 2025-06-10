@@ -78,9 +78,5 @@ async def handler(websocket, path):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8001))
     print(f"Servidor WebSocket escuchando en el puerto {port}")
-
-    async def main():
-        async with websockets.serve(handler, "0.0.0.0", port):
-            await asyncio.Future()  # run forever
-
-    asyncio.run(main())
+    
+    asyncio.run(websockets.serve(handler, "0.0.0.0", port))
