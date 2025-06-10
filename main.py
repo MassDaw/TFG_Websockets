@@ -12,7 +12,7 @@ import threading
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key'
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", logger=True, engineio_logger=True)
 
 # Configuración para API pública
 COINGECKO_API = "https://api.coingecko.com/api/v3"
