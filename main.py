@@ -34,7 +34,7 @@ def format_number(number):
 
 def get_crypto_data():
     try:
-        global_response = requests.get(f"{COINGECKO_API}/global")
+        global_response = requests.get(f"{COINGECKO_API}/global", timeout=10)
         global_response.raise_for_status()
         global_data = global_response.json()
 
@@ -45,7 +45,8 @@ def get_crypto_data():
                 "order": "market_cap_desc",
                 "per_page": 50,
                 "sparkline": False
-            }
+            },
+            timeout=10
         )
         coins_response.raise_for_status()
         coins = coins_response.json()
@@ -86,7 +87,9 @@ def handle_websocket(ws):
             ws.send(json.dumps(data))
         time.sleep(UPDATE_INTERVAL)
 
-
+@app.route("/")
+def index():
+    return "Servidor Flask activo"
 
 if __name__ == '__main__':
     print("Iniciando servidor Flask...")
