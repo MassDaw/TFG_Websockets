@@ -2,7 +2,7 @@ from gevent import monkey
 monkey.patch_all()
 
 import os
-from flask import Flask
+from flask import Flask, jsonify
 from flask_sock import Sock
 import requests
 import json
@@ -90,6 +90,10 @@ def handle_websocket(ws):
             ws.send(json.dumps(data))
         time.sleep(UPDATE_INTERVAL)
 
+@app.route("/healthz")
+def healthz():
+    return jsonify({"status": "ok"}), 200
+
 async def test_client():
     uri = "ws://localhost:8001/ws"  # Replace with your local address
     async with websockets.connect(uri) as websocket:
@@ -105,6 +109,7 @@ async def test_client():
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8001))
+    # Usa WSGIServer para servir la app con soporte WebSocket y HTTP
     server = WSGIServer(('0.0.0.0', port), app, handler_class=WebSocketHandler)
     server.serve_forever()
-    asyncio.run(test_client())
+#    asyncio.run(test_client())  # No ejecutes el cliente aquí
