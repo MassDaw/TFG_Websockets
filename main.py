@@ -114,9 +114,16 @@ def handle_websocket(ws):
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8001))
     print(f"Starting server on 0.0.0.0:{port}")
-    try:
-        server = WSGIServer(('0.0.0.0', port), app)
-        print("Server created successfully")
-        server.serve_forever()
-    except Exception as e:
-        print(f"Server error: {e}")
+    
+    # Usar Flask development server en Railway
+    if os.environ.get("RAILWAY_ENVIRONMENT"):
+        print("Running in Railway environment")
+        app.run(host='0.0.0.0', port=port, debug=False)
+    else:
+        # Usar gevent para desarrollo local
+        try:
+            server = WSGIServer(('0.0.0.0', port), app)
+            print("Server created successfully")
+            server.serve_forever()
+        except Exception as e:
+            print(f"Server error: {e}")
