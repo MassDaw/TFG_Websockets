@@ -12,7 +12,7 @@ import threading
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'your-secret-key'
-socketio = SocketIO(app, cors_allowed_origins="*", logger=True, engineio_logger=True)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Configuración para API pública
 COINGECKO_API = "https://api.coingecko.com/api/v3"
@@ -122,7 +122,6 @@ def get_crypto_data():
         coins_response.raise_for_status()
         coins = coins_response.json()
 
-        # Validación de datos globales
         market_cap = global_data.get("data", {}).get("total_market_cap", {}).get("eur", 0)
         volume_24h = global_data.get("data", {}).get("total_volume", {}).get("eur", 0)
 
