@@ -10,6 +10,8 @@ import time
 from datetime import datetime
 from gevent.pywsgi import WSGIServer
 from geventwebsocket.handler import WebSocketHandler
+import asyncio
+import websockets
 
 app = Flask(__name__)
 sock = Sock(app)
@@ -80,15 +82,29 @@ def get_crypto_data():
 
 @sock.route('/ws')
 def handle_websocket(ws):
+    print("WebSocket connection established")  # Add this line
     while True:
         data = get_crypto_data()
         if data:
+            print("Sending data:", data)  # Add this line
             ws.send(json.dumps(data))
         time.sleep(UPDATE_INTERVAL)
 
-
+async def test_client():
+    uri = "ws://localhost:8001/ws"  # Replace with your local address
+    async with websockets.connect(uri) as websocket:
+        while True:
+            try:
+                message = await websocket.recv()
+                print(f"Received: {message}")
+            except websockets.exceptions.ConnectionClosedOK:
+                break
+            except Exception as e:
+                print(f"Error: {e}")
+                break
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8001))
     server = WSGIServer(('0.0.0.0', port), app, handler_class=WebSocketHandler)
     server.serve_forever()
+    asyncio.run(test_client())
