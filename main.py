@@ -78,6 +78,9 @@ async def handler(websocket, path):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 8001))
     print(f"Servidor WebSocket escuchando en el puerto {port}")
-    start_server = websockets.serve(handler, "0.0.0.0", port)
-    asyncio.get_event_loop().run_until_complete(start_server)
-    asyncio.get_event_loop().run_forever()
+
+    async def main():
+        async with websockets.serve(handler, "0.0.0.0", port):
+            await asyncio.Future()  # run forever
+
+    asyncio.run(main())
