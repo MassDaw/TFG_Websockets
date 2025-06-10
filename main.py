@@ -1,10 +1,10 @@
+import os
 from flask import Flask
 from flask_sock import Sock
 import requests
 import json
 import time
 from datetime import datetime
-from http.server import BaseHTTPRequestHandler
 
 app = Flask(__name__)
 sock = Sock(app)
@@ -29,7 +29,9 @@ def format_number(number):
 
 def get_crypto_data():
     try:
-        global_response = requests.get(f"{COINGECKO_API}/global")
+        print("🔄 Obteniendo datos de CoinGecko...")
+        
+        global_response = requests.get(f"{COINGECKO_API}/global", timeout=10)
         global_response.raise_for_status()
         global_data = global_response.json()
 
@@ -38,9 +40,10 @@ def get_crypto_data():
             params={
                 "vs_currency": "eur",
                 "order": "market_cap_desc",
-                "per_page": 50,
+                "per_page": 20,
                 "sparkline": False
-            }
+            },
+            timeout=10
         )
         coins_response.raise_for_status()
         coins = coins_response.json()
@@ -64,85 +67,41 @@ def get_crypto_data():
             "isFavorite": False
         } for coin in coins if coin]
 
-        return {
+        result = {
             "type": "crypto",
             "market": market_data,
             "assets": assets
         }
+        
+        print(f"✅ Datos obtenidos: {len(assets)} criptomonedas")
+        return result
+        
     except Exception as e:
-        print(f"Error obteniendo datos: {e}")
+        print(f"❌ Error obteniendo datos: {e}")
         return None
 
 @sock.route('/ws')
 def handle_websocket(ws):
-    while True:
-        data = get_crypto_data()
-        if data:
-            ws.send(json.dumps(data))
-        time.sleep(UPDATE_INTERVAL)
-
-class handler(BaseHTTPRequestHandler):
-    def do_GET(self):
-        try:
+    print("🔌 Cliente WebSocket conectado")
+    try:
+        while True:
             data = get_crypto_data()
+            if data:
+                ws.send(json.dumps(data))
+                print(f"📤 Datos enviados: {len(data['assets'])} activos")
+            else:
+                error_msg = {"error": "No se pudieron obtener datos"}
+                ws.send(json.dumps(error_msg))
+                print("📤 Mensaje de error enviado")
             
-            self.send_response(200)
-            self.send_header('Content-type', 'application/json')
-            self.send_header('Access-Control-Allow-Origin', '*')
-            self.end_headers()
-            
-            self.wfile.write(json.dumps(data).encode())
-        except Exception as e:
-            self.send_response(500)
-            self.end_headers()
-            self.wfile.write(json.dumps({"error": str(e)}).encode())
-    
-    def get_crypto_data(self):
-        try:
-            global_response = requests.get(f"{COINGECKO_API}/global")
-            global_response.raise_for_status()
-            global_data = global_response.json()
-
-            coins_response = requests.get(
-                f"{COINGECKO_API}/coins/markets",
-                params={
-                    "vs_currency": "eur",
-                    "order": "market_cap_desc",
-                    "per_page": 50,
-                    "sparkline": False
-                }
-            )
-            coins_response.raise_for_status()
-            coins = coins_response.json()
-
-            # Validación de datos globales
-            market_cap = global_data.get("data", {}).get("total_market_cap", {}).get("eur", 0)
-            volume_24h = global_data.get("data", {}).get("total_volume", {}).get("eur", 0)
-
-            market_data = {
-                "marketCap": format_number(market_cap),
-                "volume24h": format_number(volume_24h),
-                "lastUpdated": datetime.now().strftime("%H:%M:%S")
-            }
-
-            assets = [{
-                "id": coin.get("id", ""),
-                "name": coin.get("name", ""),
-                "symbol": coin.get("symbol", "").upper(),
-                "price": format_number(coin.get("current_price")),
-                "volume": format_number(coin.get("total_volume")),
-                "isFavorite": False
-            } for coin in coins if coin]
-
-            return {
-                "type": "crypto",
-                "market": market_data,
-                "assets": assets
-            }
-        except Exception as e:
-            print(f"Error obteniendo datos: {e}")
-            return None
+            time.sleep(UPDATE_INTERVAL)
+    except Exception as e:
+        print(f"❌ Error en WebSocket: {e}")
+    finally:
+        print("🔌 Cliente WebSocket desconectado")
 
 if __name__ == '__main__':
-    app.run(port=8001, debug=True)
-    # uvicorn main:app --host 0.0.0.0 --port 8008
+    # Railway proporciona el puerto automáticamente
+    port = int(os.environ.get("PORT", 8001))
+    print(f"🚀 Iniciando servidor WebSocket en puerto {port}...")
+    app.run(host='0.0.0.0', port=port, debug=False)
