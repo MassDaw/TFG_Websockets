@@ -9,7 +9,6 @@ import json
 import time
 from datetime import datetime
 from gevent.pywsgi import WSGIServer
-from geventwebsocket.handler import WebSocketHandler
 
 app = Flask(__name__)
 sock = Sock(app)
@@ -90,5 +89,5 @@ def handle_websocket(ws):
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8001))
-    server = WSGIServer(('0.0.0.0', port), app, handler_class=WebSocketHandler)
+    server = WSGIServer(('0.0.0.0', port), app)
     server.serve_forever()
