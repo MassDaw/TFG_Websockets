@@ -97,24 +97,11 @@ def handle_websocket(ws):
             time.sleep(UPDATE_INTERVAL)
     except Exception as e:
         print(f"❌ Error en WebSocket: {e}")
-        import traceback
-        traceback.print_exc()
     finally:
         print("🔌 Cliente WebSocket desconectado")
 
-# CAMBIAR SOLO ESTA PARTE
 if __name__ == '__main__':
+    # Railway proporciona el puerto automáticamente
     port = int(os.environ.get("PORT", 8001))
     print(f"🚀 Iniciando servidor WebSocket en puerto {port}...")
-    
-    # Para desarrollo local
-    if os.environ.get("ENVIRONMENT") == "development":
-        app.run(host='0.0.0.0', port=port, debug=True)
-    else:
-        # Para producción - usar gunicorn
-        from gevent.pywsgi import WSGIServer
-        from geventwebsocket.handler import WebSocketHandler
-        
-        server = WSGIServer(('0.0.0.0', port), app, handler_class=WebSocketHandler)
-        print(f"✅ Servidor WebSocket iniciado con gevent en puerto {port}")
-        server.serve_forever()
+    app.run(host='0.0.0.0', port=port, debug=False)
