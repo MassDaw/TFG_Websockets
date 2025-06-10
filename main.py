@@ -8,7 +8,6 @@ import requests
 import json
 import time
 from datetime import datetime
-from gevent.pywsgi import WSGIServer
 
 app = Flask(__name__)
 sock = Sock(app)
@@ -103,27 +102,18 @@ def get_crypto_data():
 
 @sock.route('/ws')
 def handle_websocket(ws):
-    while True:
-        data = get_crypto_data()
-        if data:
-            ws.send(json.dumps(data))
-        time.sleep(UPDATE_INTERVAL)
-
-
+    print("WebSocket connection established")
+    try:
+        while True:
+            data = get_crypto_data()
+            if data:
+                ws.send(json.dumps(data))
+                print("Data sent to WebSocket client")
+            time.sleep(UPDATE_INTERVAL)
+    except Exception as e:
+        print(f"WebSocket error: {e}")
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 8001))
-    print(f"Starting server on 0.0.0.0:{port}")
-    
-    # Usar Flask development server en Railway
-    if os.environ.get("RAILWAY_ENVIRONMENT"):
-        print("Running in Railway environment")
-        app.run(host='0.0.0.0', port=port, debug=False)
-    else:
-        # Usar gevent para desarrollo local
-        try:
-            server = WSGIServer(('0.0.0.0', port), app)
-            print("Server created successfully")
-            server.serve_forever()
-        except Exception as e:
-            print(f"Server error: {e}")
+    print(f"Starting Flask server on 0.0.0.0:{port}")
+    app.run(host='0.0.0.0', port=port, debug=False)
